@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
             userId,
             name: parsed.data.name,
             query: parsed.data.query,
-            filters: parsed.data.filters,
+            filters: parsed.data.filters as import('@prisma/client').Prisma.InputJsonValue,
             frequency: parsed.data.frequency,
         },
     })
