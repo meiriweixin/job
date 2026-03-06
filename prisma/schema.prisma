@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, unaccent]
+}
+
+// ─── AUTH (NextAuth v5) ───────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("user") // "user" | "admin"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  savedJobs SavedJob[]
+  alerts    Alert[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── JOBS ─────────────────────────────────────────────────────────────────────
+
+model Job {
+  id             String   @id @default(uuid())
+  externalId     String   @unique
+  source         String   @default("sg-jobs")
+  title          String
+  company        String?
+  description    String?  @db.Text
+  location       String?
+  employmentType String?
+  seniority      String?
+  salaryMin      Int?
+  salaryMax      Int?
+  currency       String   @default("SGD")
+  postedAt       DateTime?
+  applyUrl       String?
+  tags           String[]
+  raw            Json
+  searchVector   Unsupported("tsvector")?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  savedJobs      SavedJob[]
+  alertRuns      AlertRunJob[]
+
+  @@index([postedAt(sort: Desc)])
+  @@index([employmentType])
+  @@index([location])
+  @@index([tags])
+  @@map("jobs")
+}
+
+// ─── SAVED JOBS ───────────────────────────────────────────────────────────────
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@map("saved_jobs")
+}
+
+// ─── ALERTS ───────────────────────────────────────────────────────────────────
+
+model Alert {
+  id        String      @id @default(cuid())
+  userId    String
+  name      String
+  query     String?
+  filters   Json        @default("{}")
+  frequency AlertFrequency @default(DAILY)
+  lastRunAt DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs      AlertRun[]
+
+  @@map("alerts")
+}
+
+model AlertRun {
+  id           String        @id @default(cuid())
+  alertId      String
+  runAt        DateTime      @default(now())
+  matchCount   Int           @default(0)
+
+  alert        Alert         @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  matchedJobs  AlertRunJob[]
+
+  @@map("alert_runs")
+}
+
+model AlertRunJob {
+  alertRunId String
+  jobId      String
+
+  alertRun   AlertRun @relation(fields: [alertRunId], references: [id], onDelete: Cascade)
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@id([alertRunId, jobId])
+  @@map("alert_run_jobs")
+}
+
+enum AlertFrequency {
+  DAILY
+  WEEKLY
+}
+
+// ─── INGEST LOG ───────────────────────────────────────────────────────────────
+
+model IngestLog {
+  id          String   @id @default(cuid())
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  status      String   @default("running") // "running" | "success" | "error"
+  jobsFetched Int      @default(0)
+  jobsUpserted Int     @default(0)
+  error       String?  @db.Text
+
+  @@map("ingest_logs")
+}

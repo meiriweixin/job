@@ -1,0 +1,12 @@
+.env
+.env.local
+.env.*.local
+node_modules/
+.next/
+out/
+dist/
+.DS_Store
+*.log
+*.tsbuildinfo
+coverage/
+.nyc_output
