@@ -35,10 +35,10 @@ export function AlertsClient({ alerts: initialAlerts }: { alerts: Alert[] }) {
     const [showCreate, setShowCreate] = useState(false)
     const [expanded, setExpanded] = useState<string | null>(null)
     const [creating, setCreating] = useState(false)
-    const [form, setForm] = useState({
+    const [form, setForm] = useState<{ name: string; query: string; frequency: 'DAILY' | 'WEEKLY' }>({
         name: '',
         query: '',
-        frequency: 'DAILY' as const,
+        frequency: 'DAILY',
     })
 
     const createAlert = async (e: React.FormEvent) => {

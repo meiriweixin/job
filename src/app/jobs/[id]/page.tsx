@@ -46,6 +46,7 @@ export default async function JobDetailPage({ params }: Props) {
         postedAt: job.postedAt?.toISOString() ?? null,
         applyUrl: job.applyUrl,
         tags: job.tags,
+        raw: job.raw,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     }
