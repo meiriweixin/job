@@ -116,8 +116,8 @@ export function mapJob(raw: Record<string, unknown>, source = 'sg-jobs'): Mapped
         null
 
     const externalId = nativeId
-        ? `${source}:${String(nativeId)}`
-        : `${source}:${hashJob(raw)}`
+        ? `${source}-${String(nativeId)}`
+        : `${source}-${hashJob(raw)}`
 
     // Salary
     const { salaryMin, salaryMax, currency } = parseSalary(salaryRaw)
