@@ -63,9 +63,13 @@ export async function PATCH(
     const parsed = UpdateSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
+    const { filters, ...rest } = parsed.data
     const updated = await prisma.alert.update({
         where: { id: params.alertId },
-        data: parsed.data,
+        data: {
+            ...rest,
+            ...(filters !== undefined ? { filters: filters as Record<string, unknown> as import('@prisma/client').Prisma.InputJsonValue } : {}),
+        },
     })
 
     return NextResponse.json({ alert: updated })

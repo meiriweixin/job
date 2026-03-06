@@ -8,7 +8,6 @@
  * We also accept long-form keys as fallbacks for other sources.
  */
 import { parseSalary } from './salary-parser'
-import { createHash } from 'crypto'
 
 export interface MappedJob {
     externalId: string
@@ -28,6 +27,15 @@ export interface MappedJob {
     raw: Record<string, unknown>
 }
 
+/** Simple string hash (DJB2) — no crypto dependency needed */
+function simpleHash(str: string): string {
+    let hash = 5381
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0
+    }
+    return hash.toString(16).padStart(8, '0')
+}
+
 /** Generate a stable hash-based external ID from stable fields */
 function hashJob(raw: Record<string, unknown>): string {
     const stable = JSON.stringify({
@@ -35,7 +43,7 @@ function hashJob(raw: Record<string, unknown>): string {
         c: raw['c'] ?? raw['company'],
         u: raw['u'] ?? raw['url'] ?? raw['applyUrl'],
     })
-    return createHash('sha256').update(stable).digest('hex').slice(0, 32)
+    return simpleHash(stable)
 }
 
 /** Strip basic HTML tags from a string */

@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { getCachedJobs } from '@/lib/job-cache'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { Briefcase, Bell, Bookmark, TrendingUp, ArrowRight } from 'lucide-react'
@@ -11,22 +12,17 @@ export default async function DashboardPage() {
 
     const userId = (session.user as { id: string }).id
 
-    const [recentJobs, savedCount, alertCount] = await Promise.all([
-        prisma.job.findMany({
-            take: 5,
-            orderBy: { createdAt: 'desc' },
-            select: { id: true, title: true, company: true, location: true, postedAt: true, employmentType: true },
-        }),
+    // Fetch recent jobs from cache, user stats from DB
+    const [allJobs, savedCount, alertCount] = await Promise.all([
+        getCachedJobs(),
         prisma.savedJob.count({ where: { userId } }),
         prisma.alert.count({ where: { userId } }),
     ])
 
-    const ingestLogs = await prisma.ingestLog.findMany({
-        take: 3,
-        orderBy: { startedAt: 'desc' },
-    })
-
-    const lastIngest = ingestLogs[0]
+    // Get 5 most recent jobs sorted by postedAt
+    const recentJobs = [...allJobs]
+        .sort((a, b) => (b.postedAt?.getTime() ?? 0) - (a.postedAt?.getTime() ?? 0))
+        .slice(0, 5)
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -44,10 +40,10 @@ export default async function DashboardPage() {
                     { icon: Bell, label: 'Active Alerts', value: alertCount, href: '/alerts', color: 'text-purple-600 bg-purple-50' },
                     {
                         icon: TrendingUp,
-                        label: 'Last Ingest',
-                        value: lastIngest ? `${lastIngest.jobsUpserted} jobs` : 'Never',
-                        href: '#',
-                        color: 'text-green-600 bg-green-50'
+                        label: 'Total Jobs',
+                        value: `${allJobs.length.toLocaleString()}`,
+                        href: '/jobs',
+                        color: 'text-green-600 bg-green-50',
                     },
                 ].map(({ icon: Icon, label, value, href, color }) => (
                     <Link
@@ -78,8 +74,8 @@ export default async function DashboardPage() {
                 <div className="divide-y divide-gray-50">
                     {recentJobs.map((job) => (
                         <Link
-                            key={job.id}
-                            href={`/jobs/${job.id}`}
+                            key={job.externalId}
+                            href={`/jobs/${job.externalId}`}
                             className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
                         >
                             <div>
@@ -89,16 +85,13 @@ export default async function DashboardPage() {
                             <div className="text-xs text-gray-400 flex-shrink-0 ml-4">{formatDate(job.postedAt)}</div>
                         </Link>
                     ))}
+                    {recentJobs.length === 0 && (
+                        <div className="px-6 py-8 text-center text-gray-400 text-sm">
+                            Loading job data...
+                        </div>
+                    )}
                 </div>
             </div>
-
-            {/* Last ingest info */}
-            {lastIngest && (
-                <div className="mt-4 bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-500 flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full ${lastIngest.status === 'success' ? 'bg-green-400' : lastIngest.status === 'error' ? 'bg-red-400' : 'bg-yellow-400'}`} />
-                    Last data refresh: {formatDate(lastIngest.startedAt)} · {lastIngest.jobsUpserted} jobs upserted
-                </div>
-            )}
         </div>
     )
 }

@@ -57,11 +57,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
         async signIn({ user }) {
             // Auto-promote to admin if email is in ADMIN_EMAILS
+            // On first sign-in the user record may not exist yet (created after this callback),
+            // so we catch the error and let it pass — admin role is set on next sign-in.
             if (user.email && ADMIN_EMAILS.includes(user.email)) {
-                await prisma.user.update({
-                    where: { email: user.email },
-                    data: { role: 'admin' },
-                })
+                try {
+                    await prisma.user.update({
+                        where: { email: user.email },
+                        data: { role: 'admin' },
+                    })
+                } catch {
+                    // User record not created yet — will be promoted on next sign-in
+                    console.log('[auth] User record not found yet, will promote on next sign-in')
+                }
             }
             return true
         },

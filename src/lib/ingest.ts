@@ -280,7 +280,7 @@ export async function runSingleAlert(alertId: string) {
 
     // Build WHERE clause from alert params
     const jobs = await prisma.$queryRaw<{ id: string }[]>`
-    SELECT id FROM "jobs"
+    SELECT id FROM "job_jobs"
     WHERE "createdAt" > ${since}
     AND (
       ${alert.query ? `"searchVector" @@ plainto_tsquery('english', ${alert.query})` : 'TRUE'}

@@ -9,6 +9,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
   extensions = [pg_trgm, unaccent]
 }
 
@@ -29,7 +30,7 @@ model User {
   savedJobs SavedJob[]
   alerts    Alert[]
 
-  @@map("users")
+  @@map("job_users")
 }
 
 model Account {
@@ -49,7 +50,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
-  @@map("accounts")
+  @@map("job_accounts")
 }
 
 model Session {
@@ -60,7 +61,7 @@ model Session {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("sessions")
+  @@map("job_sessions")
 }
 
 model VerificationToken {
@@ -69,7 +70,7 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-  @@map("verification_tokens")
+  @@map("job_verification_tokens")
 }
 
 // ─── JOBS ─────────────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ model Job {
   @@index([employmentType])
   @@index([location])
   @@index([tags])
-  @@map("jobs")
+  @@map("job_jobs")
 }
 
 // ─── SAVED JOBS ───────────────────────────────────────────────────────────────
@@ -118,7 +119,7 @@ model SavedJob {
   job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobId])
-  @@map("saved_jobs")
+  @@map("job_saved_jobs")
 }
 
 // ─── ALERTS ───────────────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ model Alert {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   runs      AlertRun[]
 
-  @@map("alerts")
+  @@map("job_alerts")
 }
 
 model AlertRun {
@@ -149,7 +150,7 @@ model AlertRun {
   alert        Alert         @relation(fields: [alertId], references: [id], onDelete: Cascade)
   matchedJobs  AlertRunJob[]
 
-  @@map("alert_runs")
+  @@map("job_alert_runs")
 }
 
 model AlertRunJob {
@@ -160,7 +161,7 @@ model AlertRunJob {
   job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@id([alertRunId, jobId])
-  @@map("alert_run_jobs")
+  @@map("job_alert_run_jobs")
 }
 
 enum AlertFrequency {
@@ -179,5 +180,5 @@ model IngestLog {
   jobsUpserted Int     @default(0)
   error       String?  @db.Text
 
-  @@map("ingest_logs")
+  @@map("job_ingest_logs")
 }
